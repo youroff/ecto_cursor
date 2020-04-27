@@ -18,7 +18,8 @@ defmodule EctoCursor.MixProject do
     {:ecto, "~> 3.0"},
     {:ecto_sql, "~> 3.0"},
     {:postgrex, ">= 0.0.0", optional: true},
-    {:monex, "~> 0.1"}
+    {:monex, "~> 0.1"},
+    {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
   ]
 
   defp description(), do: """

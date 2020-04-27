@@ -1,6 +1,10 @@
 defmodule EctoCursor do
   @moduledoc """
   Documentation for `EctoCursor`.
+
+  This is a fully automatic cursor (keyset) based pagination for Ecto.
+  It supports (or eventually will support) arbtrary expressions in `order_by` clause.
+  Currently it's purely experimental (see tests for test cases that are definitely supported).
   """
 
   alias EctoCursor.{Cursor, Expr}
