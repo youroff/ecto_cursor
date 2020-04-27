@@ -2,7 +2,7 @@ defmodule EctoCursor.Cursor do
   @moduledoc false
 
   defstruct [:next, :limit]
-  import MonEx.{Option, Result}
+  import MonEx.Option
 
   @max_limit 500
   @default_limit 50

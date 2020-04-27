@@ -6,7 +6,8 @@ defmodule EctoCursor.MixProject do
     version: "0.1.0",
     elixir: "~> 1.10",
     deps: deps(),
-    description: description()
+    description: description(),
+    package: package()
   ]
 
   def application, do: [
