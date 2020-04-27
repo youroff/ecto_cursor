@@ -5,7 +5,6 @@ defmodule EctoCursor.MixProject do
     app: :ecto_cursor,
     version: "0.1.0",
     elixir: "~> 1.10",
-    licenses: ,
     deps: deps(),
     description: description()
   ]
