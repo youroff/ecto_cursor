@@ -58,4 +58,15 @@ defmodule EctoCursorTest do
     assert %Page{cursor: c3, entries: [%{a: 3, c: 2004}]} = Repo.paginate(query, %{cursor: c2, limit: 1})
     assert %Page{cursor: nil, entries: []} = Repo.paginate(query, %{cursor: c3, limit: 1})
   end
+
+  test "with fragment similarity" do
+    term = "Ab"
+
+    query = Album
+    |> order_by([a], desc: fragment("similarity(?, ?)", ^term, a.name), asc: a.id)
+    |> select([a], %{a: a.id, b: a.name})
+
+    assert %Page{cursor: c1, entries: [%{a: 2, b: ^term}]} = Repo.paginate(query, %{limit: 1})
+    assert %Page{cursor: _, entries: [%{a: 1, b: "Aa"}]} = Repo.paginate(query, %{cursor: c1, limit: 1})
+  end
 end

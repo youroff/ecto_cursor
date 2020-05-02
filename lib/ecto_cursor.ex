@@ -50,10 +50,12 @@ defmodule EctoCursor do
   end
 
   def get_next_cursor(query, opts) do
-    %{query | select: %Ecto.Query.SelectExpr{
+    cursor_select = %Ecto.Query.SelectExpr{
       expr: {:{}, [], Enum.map(opts.exprs, & &1.term)},
       params: Enum.map(opts.exprs, & &1.params) |> Enum.reduce(&Enum.concat/2)
-    }}
+    }
+
+    %{query | select: cursor_select}
     |> offset(^(opts.limit - 1))
     |> limit(1)
     |> opts.module.one()

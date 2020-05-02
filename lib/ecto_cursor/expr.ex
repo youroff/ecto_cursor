@@ -40,6 +40,11 @@ defmodule EctoCursor.Expr do
     {{op, meta, Enum.reverse(children)}, offset}
   end
 
+  defp reset_free_vars({t, e}, o) do
+    {op, offset} = reset_free_vars(e, o)
+    {{t, op}, offset}
+  end
+
   defp reset_free_vars(t, o), do: {t, o}
 
   def build_clause(exprs, params) do
