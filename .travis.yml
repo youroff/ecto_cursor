@@ -4,12 +4,11 @@ elixir:
   - 1.10
 otp_release: 22.3
 
-# matrix:
-#   include:
-#     - elixir: 1.8
-#       otp_release: 21
-#     - elixir: 1.9
-#       otp_release: 22
+services:
+  - postgresql
+  
+before_script:
+  - psql -c 'create database ecto_cursor_test;' -U postgres
 
 script:
   - mix test
