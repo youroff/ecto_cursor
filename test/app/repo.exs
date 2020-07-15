@@ -10,6 +10,7 @@ defmodule TestApp.Artist do
 
   schema "artists" do
     field :name, :string
+    field :album_count, :integer, virtual: true
     has_many :albums, TestApp.Album
   end
 end

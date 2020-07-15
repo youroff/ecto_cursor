@@ -2,66 +2,87 @@ defmodule EctoCursor do
   @moduledoc """
   Documentation for `EctoCursor`.
 
-  This is a fully automatic cursor (keyset) based pagination for Ecto.
-  It supports (or eventually will support) arbtrary expressions in `order_by` clause.
-  Currently it's purely experimental (see tests for test cases that are definitely supported).
+  This is a fully automatic cursor based pagination for Ecto.
+  It requires zero configuraion and is aiming to support arbitrary queries:
+  joins, grouppings with aggregates, etc. Currently absolute support is not guaranteed,
+  as this library is still under development (I appreciate issues).
+
+  ### Usage
+
+      defmodule YourApp.Repo do
+        use Ecto.Repo,
+          otp_app: :your_app,
+          adapter: Ecto.Adapters.Postgres
+        use EctoCursor
+      end
+
+  This adds function `paginate` to the Repo:
+
+      params = %{cursor: str limit: int max_limit: int}
+      %Page{entries: [...], cursor: next} = Repo.paginate(query, params)
+
+  All parameters are optional, `max_limit` is used to trim client passed limit.
+  Missing cursor means the beginning of the stream.
+
+  ### Validation of cursor
+  Cursor produced by the query is signed and supposed to work
+  with the query with exactly the same ordering. Invalid cursor will be simply ignored.
+
+  ### Generation of cursor
+  Unlike very first version, where cursor was generated with a separate request,
+  now it's all happening in one call. This might break with some complex expressions in select clause.
+  Please report if it's broken for you.
+
   """
 
-  alias EctoCursor.{Cursor, Expr}
-  import MonEx.Option
+  alias EctoCursor.{Context, Cursor, Expr, Page}
   import Ecto.Query
 
   defmacro __using__(_) do
     quote do
+      @spec paginate(Ecto.Query.t, Cursor.t) :: Page.t
       def paginate(query, opts \\ %{}) do
         if Enum.empty?(query.order_bys) do
           raise "cannot cursor-paginate unordered query"
         end
 
-        opts = Cursor.trim_cursor(opts)
-        |> Map.put(:exprs, EctoCursor.Expr.extract(query.order_bys))
-        |> Map.put(:module, __MODULE__)
-        |> Map.put(:simple, Enum.empty? query.group_bys)
+        context = Context.build(query, opts)
 
-        query = EctoCursor.augument_query(query, opts)
-        next = Task.async(fn -> EctoCursor.get_next_cursor(query, opts) end)
+        results = EctoCursor.augument_query(query, context)
+        |> EctoCursor.append_cursor(context)
+        |> __MODULE__.all()
 
-        %EctoCursor.Page{
-          entries: __MODULE__.all(query),
-          cursor: Task.await(next)
+        %Page{
+          entries: results |> Enum.map(&elem(&1, 0)),
+          cursor: Cursor.compute(results, context)
         }
       end
     end
   end
 
-  def augument_query(query, %{cursor: nil, limit: l}) do
-    limit(query, ^l)
+  @doc """
+  Applying condition from the cursor to the query.
+  This includes generating additional `where` or `having` clauses and applying a limit.
+  """
+  @spec augument_query(Ecto.Query.t, Context.t) :: Ecto.Query.t
+  def augument_query(query, %{cursor: nil, limit: lim}) do
+    limit(query, ^lim)
   end
 
-  def augument_query(query, %{cursor: cursor, limit: l} = opts) do
-    if length(cursor) != length(opts.exprs) do
-      raise "number of values in cursor doesn't match number of ordering clauses"
-    end
-
-    clause = Expr.build_clause(opts.exprs, Enum.zip(cursor, Enum.map(opts.exprs, & &1.type)))
-    placement = if opts.simple, do: :wheres, else: :havings
+  def augument_query(query, %{cursor: cursor, limit: lim, placement: placement, exprs: exprs}) do
+    params = Enum.zip(cursor, Enum.map(exprs, & &1.type))
+    clause = Expr.build_where(exprs, params)
     Map.put(query, placement, Map.get(query, placement, []) ++ [clause])
-    |> limit(^l)
+    |> limit(^lim)
   end
 
-  def get_next_cursor(query, opts) do
-    cursor_select = %Ecto.Query.SelectExpr{
-      expr: {:{}, [], Enum.map(opts.exprs, & &1.term)},
-      params: Enum.map(opts.exprs, & &1.params) |> Enum.reduce(&Enum.concat/2)
-    }
-
-    %{query | select: cursor_select}
-    |> offset(^(opts.limit - 1))
-    |> limit(1)
-    |> opts.module.one()
-    |> to_option()
-    |> MonEx.map(&Tuple.to_list/1)
-    |> MonEx.flat_map(&Cursor.encode/1)
-    |> get_or_else(nil)
+  @doc """
+  Injecting next cursor components into the query. This is done by wrapping original (or default)
+  select into the tuple `select({original_select, {componen1, component2, ...}})` and potentiall
+  can mess up complex queries.
+  """
+  @spec append_cursor(Ecto.Query.t, Context.t) :: Ecto.Query.t
+  def append_cursor(query, ctx) do
+    %{query | select: Expr.build_select(ctx.exprs, query.select)}
   end
 end

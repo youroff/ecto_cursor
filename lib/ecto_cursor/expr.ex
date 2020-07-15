@@ -3,6 +3,16 @@ defmodule EctoCursor.Expr do
 
   defstruct [:term, :dir, :type, :params]
 
+  @type ast :: {atom | ast, [any], [ast]}
+  @type dir :: :desc | :desc_nulls_last | :desc_nulls_first | :asc | :asc_nulls_last | :asc_nulls_first
+
+  @type t :: %__MODULE__{
+    term: ast,
+    dir: dir,
+    type: any,
+    params: [any]
+  }
+
   def extract(exprs, expr_acc \\ [])
 
   def extract([], expr_acc) do
@@ -11,6 +21,39 @@ defmodule EctoCursor.Expr do
 
   def extract([%{expr: exprs, params: params} | rest], expr_acc) do
     extract(rest, expr_acc ++ split_params(exprs, params))
+  end
+
+  def build_where(exprs, params) do
+    {tree, _} = Enum.zip(exprs, params)
+    |> Enum.reduce({[], []}, fn {expr, param}, {acc, params_acc} ->
+      current = Enum.reverse([build_comp(op(expr), expr, param) | params_acc])
+      {[current | acc], [build_comp(:==, expr, param) | params_acc]}
+    end)
+
+    {clause_expr, clause_params} = Enum.reverse(tree)
+    |> Enum.map(fn ands ->
+      Enum.map(ands, & {&1.term, &1.params})
+      |> Enum.reduce(comp_reducer(:and))
+    end)
+    |> Enum.reduce(comp_reducer(:or))
+
+    %Ecto.Query.BooleanExpr{
+      expr: clause_expr,
+      params: clause_params,
+      op: :and
+    }
+  end
+
+  def build_select(exprs, select) do
+    original_select = select || %Ecto.Query.SelectExpr{expr: {:&, [], [0]}}
+
+    cursor_components = Enum.map(exprs, & &1.term)
+    cursor_params = Enum.map(exprs, & &1.params) |> Enum.reduce(&Enum.concat/2)
+
+    %{original_select |
+      expr: {:{}, [], [original_select.expr, cursor_components]},
+      params: original_select.params ++ cursor_params
+    }
   end
 
   defp split_params([], _), do: []
@@ -46,27 +89,6 @@ defmodule EctoCursor.Expr do
   end
 
   defp reset_free_vars(t, o), do: {t, o}
-
-  def build_clause(exprs, params) do
-    {tree, _} = Enum.zip(exprs, params)
-    |> Enum.reduce({[], []}, fn {expr, param}, {acc, params_acc} ->
-      current = Enum.reverse([build_comp(op(expr), expr, param) | params_acc])
-      {[current | acc], [build_comp(:==, expr, param) | params_acc]}
-    end)
-
-    {clause_expr, clause_params} = Enum.reverse(tree)
-    |> Enum.map(fn ands ->
-      Enum.map(ands, & {&1.term, &1.params})
-      |> Enum.reduce(comp_reducer(:and))
-    end)
-    |> Enum.reduce(comp_reducer(:or))
-
-    %Ecto.Query.BooleanExpr{
-      expr: clause_expr,
-      params: clause_params,
-      op: :and
-    }
-  end
 
   # This is a huuuuuge TODO, but can be mitigated by coalesce in expression
   defp op(%{dir: :desc}), do: :<

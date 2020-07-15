@@ -3,7 +3,7 @@ defmodule EctoCursor.MixProject do
 
   def project, do: [
     app: :ecto_cursor,
-    version: "0.1.1",
+    version: "0.1.2",
     elixir: "~> 1.10",
     deps: deps(),
     description: description(),
@@ -18,14 +18,14 @@ defmodule EctoCursor.MixProject do
     {:ecto, "~> 3.0"},
     {:ecto_sql, "~> 3.0"},
     {:postgrex, ">= 0.0.0", optional: true},
-    {:monex, "~> 0.1"},
+    {:dialyxir, "~> 1.0.0", runtime: false},
     {:ex_doc, ">= 0.0.0", only: :dev, runtime: false}
   ]
 
   defp description(), do: """
-    This is a fully automatic cursor (keyset) based pagination for Ecto.
-    It supports (or eventually will support) arbtrary expressions in order_by clause.
-    Currently it's purely experimental (see tests for test cases that are definitely supported).
+    A fully automatic cursor pagination for Ecto.
+    It relies on analysis of the expressions in order_by clause
+    and requires no configuration.
   """
 
   defp package, do: [

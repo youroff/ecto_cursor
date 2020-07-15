@@ -46,16 +46,32 @@ defmodule EctoCursorTest do
     assert is_nil(c3)
   end
 
-  test "with group by and max aggregate" do
-    query = Artist
-    |> join(:left, [a], b in assoc(a, :albums))
-    |> group_by([a], a.id)
-    |> order_by([a, b], desc: max(b.year), asc: a.id)
-    |> select([a, b], %{a: a.id, b: a.name, c: max(b.year)})
+  test "with count and select_merge" do
+    query = from artist in Artist,
+      join: album in assoc(artist, :albums),
+      group_by: artist.id,
+      order_by: [desc: artist.name, asc: artist.id],
+      select_merge: %{album_count: count(album)}
 
-    assert %Page{cursor: c1, entries: [%{a: 1, c: 2020}]} = Repo.paginate(query, %{limit: 1})
-    assert %Page{cursor: c2, entries: [%{a: 2, c: 2020}]} = Repo.paginate(query, %{cursor: c1, limit: 1})
-    assert %Page{cursor: c3, entries: [%{a: 3, c: 2004}]} = Repo.paginate(query, %{cursor: c2, limit: 1})
+    assert %Page{cursor: c1, entries: [artist | _]} = Repo.paginate(query, %{limit: 2})
+    assert artist.name == "C" && artist.album_count == 2
+
+    assert %Page{cursor: c2, entries: [artist]} = Repo.paginate(query, %{cursor: c1, limit: 2})
+    assert artist.name == "A" && artist.album_count == 3
+  end
+
+  test "with group by and max aggregate" do
+    year = 2000
+    query = from artist in Artist,
+      join: album in assoc(artist, :albums),
+      group_by: artist.id,
+      order_by: [desc: max(album.year), asc: artist.id],
+      having: max(album.year) > ^year,
+      select: %{id: artist.id, name: artist.name, year: max(album.year)}
+
+    assert %Page{cursor: c1, entries: [%{id: 1, year: 2020}]} = Repo.paginate(query, %{limit: 1})
+    assert %Page{cursor: c2, entries: [%{id: 2, year: 2020}]} = Repo.paginate(query, %{cursor: c1, limit: 1})
+    assert %Page{cursor: c3, entries: [%{id: 3, year: 2004}]} = Repo.paginate(query, %{cursor: c2, limit: 1})
     assert %Page{cursor: nil, entries: []} = Repo.paginate(query, %{cursor: c3, limit: 1})
   end
 
