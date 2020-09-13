@@ -3,7 +3,7 @@ defmodule EctoCursor.MixProject do
 
   def project, do: [
     app: :ecto_cursor,
-    version: "0.1.2",
+    version: "0.1.3",
     elixir: "~> 1.10",
     deps: deps(),
     description: description(),

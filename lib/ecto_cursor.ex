@@ -40,7 +40,7 @@ defmodule EctoCursor do
 
   defmacro __using__(_) do
     quote do
-      @spec paginate(Ecto.Query.t, Cursor.t) :: Page.t
+      @spec paginate(Ecto.Query.t, Cursor.opts()) :: Page.t(Ecto.Schema.t())
       def paginate(query, opts \\ %{}) do
         if Enum.empty?(query.order_bys) do
           raise "cannot cursor-paginate unordered query"
