@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/youroff/ecto_cursor.svg?branch=master)](https://travis-ci.org/youroff/ecto_cursor)
 
-his is a fully automatic cursor based pagination for Ecto.
+This is a fully automatic cursor based pagination for Ecto.
 It requires zero configuraion and is aiming to support arbitrary queries:
 joins, grouppings with aggregates, etc. Currently complete support is not guaranteed,
 as this library is still under development (and I appreciate issues reports on github).
