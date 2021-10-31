@@ -56,7 +56,7 @@ defmodule EctoCursorTest do
     assert %Page{cursor: c1, entries: [artist | _]} = Repo.paginate(query, %{limit: 2})
     assert artist.name == "C" && artist.album_count == 2
 
-    assert %Page{cursor: c2, entries: [artist]} = Repo.paginate(query, %{cursor: c1, limit: 2})
+    assert %Page{cursor: _, entries: [artist]} = Repo.paginate(query, %{cursor: c1, limit: 2})
     assert artist.name == "A" && artist.album_count == 3
   end
 

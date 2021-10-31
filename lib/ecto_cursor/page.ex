@@ -3,7 +3,7 @@ defmodule EctoCursor.Page do
 
   @type t(model) :: %__MODULE__{
     entries: [model],
-    cursor: String.t
+    cursor: String.t | nil
   }
 
   defstruct [:entries, :cursor]
