@@ -1,8 +1,8 @@
 defmodule EctoCursor.Cursor do
   @moduledoc false
 
-  @max_limit Application.get_env(EctoCursor, :max_limit, 500)
-  @default_limit Application.get_env(EctoCursor, :default_limit, 50)
+  @max_limit Application.compile_env(EctoCursor, :max_limit, 500)
+  @default_limit Application.compile_env(EctoCursor, :default_limit, 50)
 
   @type opts :: %{
     optional(:cursor) => String.t,
@@ -20,6 +20,7 @@ defmodule EctoCursor.Cursor do
   def extract_limit(opts) do
     Map.get(opts, :limit, @default_limit)
     |> min(Map.get(opts, :max_limit, @max_limit))
+    |> max(0)
   end
 
   @doc """

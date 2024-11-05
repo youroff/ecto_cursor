@@ -6,6 +6,7 @@ defmodule EctoCursorTest.Cursor do
     assert 50 = Cursor.extract_limit(%{})
     assert 500 = Cursor.extract_limit(%{limit: 5000})
     assert 1000 = Cursor.extract_limit(%{limit: 5000, max_limit: 1000})
+    assert 0 = Cursor.extract_limit(%{limit: -2})
   end
 
   test "extracting cursor" do
